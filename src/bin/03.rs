@@ -5,7 +5,7 @@ use nom::{
     combinator::map_res,
     multi::{fold_many0, many0, many_till},
     sequence::delimited,
-    IResult,
+    IResult, Parser,
 };
 
 advent_of_code::solution!(3);
@@ -16,9 +16,9 @@ fn from_numeric_str(input: &str) -> Result<u16, std::num::ParseIntError> {
 
 // parse 2,4
 fn parse_pair(input: &str) -> IResult<&str, (u16, u16)> {
-    let (input, d1) = map_res(digit1, from_numeric_str)(input)?;
+    let (input, d1) = map_res(digit1, from_numeric_str).parse(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, d2) = map_res(digit1, from_numeric_str)(input)?;
+    let (input, d2) = map_res(digit1, from_numeric_str).parse(input)?;
     Ok((input, (d1, d2)))
 }
 
@@ -32,23 +32,23 @@ enum Command {
 
 /// parse things like mul(2,4)
 fn parse_mul(input: &str) -> IResult<&str, u64> {
-    let (input, pair) = delimited(tag("mul("), parse_pair, tag(")"))(input)?;
+    let (input, pair) = delimited(tag("mul("), parse_pair, tag(")")).parse(input)?;
     Ok((input, pair.0 as u64 * pair.1 as u64))
 }
 
 fn parse_mul2(input: &str) -> IResult<&str, Command> {
-    let (input, pair) = delimited(tag("mul("), parse_pair, tag(")"))(input)?;
+    let (input, pair) = delimited(tag("mul("), parse_pair, tag(")")).parse(input)?;
     Ok((input, Command::Mul(pair.0 as u64 * pair.1 as u64)))
 }
 
 /// parse things like xmul(2,4) dropping the x
 fn parse_until_mul(input: &str) -> IResult<&str, u64> {
-    let (input, result) = many_till(take(1u8), parse_mul)(input)?;
+    let (input, result) = many_till(take(1u8), parse_mul).parse(input)?;
     Ok((input, result.1))
 }
 
 fn parse_agg_mul(input: &str) -> IResult<&str, u64> {
-    fold_many0(parse_until_mul, || 0u64, |acc, item| acc + item)(input)
+    fold_many0(parse_until_mul, || 0u64, |acc, item| acc + item).parse(input)
 }
 
 fn parse_do(input: &str) -> IResult<&str, Command> {
@@ -67,11 +67,11 @@ fn parse_nop(input: &str) -> IResult<&str, Command> {
 }
 
 fn parse_command(input: &str) -> IResult<&str, Command> {
-    alt((parse_mul2, parse_do, parse_dont, parse_nop))(input)
+    alt((parse_mul2, parse_do, parse_dont, parse_nop)).parse(input)
 }
 
 fn parse_commands(input: &str) -> IResult<&str, Vec<Command>> {
-    many0(parse_command)(input)
+    many0(parse_command).parse(input)
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
